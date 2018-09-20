@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Feb 26 10:11:11 2018
+
+@author: dmorton
+"""
+
+from keras.applications import ResNet50
+from keras.callbacks import TensorBoard, LearningRateScheduler, ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
+from keras.models import Model
+from keras.layers import Dense, Dropout
+from keras.optimizers import RMSprop
+from keras.preprocessing.image import ImageDataGenerator
+from keras.regularizers import l2
+
+import os
+path = '/Users/dmorton/Documents/Plants'
+os.chdir(path)
+
+
+
+CATEGORIES = ['Black-grass', 'Charlock', 'Cleavers', 'Common Chickweed', 'Common wheat', 'Fat Hen', 'Loose Silky-bent',
+              'Maize', 'Scentless Mayweed', 'Shepherds Purse', 'Small-flowered Cranesbill', 'Sugar beet']
+
+
+img_height = 299
+img_width = 299
+img_channels = 3
+            
+train_datagen = ImageDataGenerator(
+    rescale=1. / 255,
+    rotation_range=90,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    #shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    vertical_flip=True)
+
+train_generator = train_datagen.flow_from_directory(
+    './train',
+    target_size=(img_height, img_width),
+    batch_size=16,
+    class_mode='categorical',
+    shuffle=True)
+
+val_datagen = ImageDataGenerator(rescale=1. / 255)
+
+val_generator = val_datagen.flow_from_directory(
+    './dev',
+    target_size=(img_height, img_width),
+    batch_size=16,
+    class_mode='categorical',
+    shuffle=True)
+
+
+res50_model = ResNet50(include_top=False, weights='imagenet', pooling='avg')
+
+#%%
+for layer in res50_model.layers:
+    layer.trainable = False
+
+input_tensor = res50_model.input
+# build top
+x = res50_model.output
+x = Dropout(.5)(x)
+x = Dense(len(CATEGORIES), activation='softmax')(x)
+
+
+best_model_file = path + '/res50-299x299.h5'
+
+callbacks = [TensorBoard('./logs'),
+             EarlyStopping(monitor='val_loss', patience=3, verbose=1, min_delta=1e-5),
+             ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=1, cooldown=1, 
+                               verbose=1, min_lr=1e-7),
+             ModelCheckpoint(filepath=best_model_file, verbose=1,
+                             save_best_only=True, save_weights_only=True, mode='auto')]
+
+model = Model(inputs=input_tensor, outputs=x)
+model.compile(optimizer=RMSprop(1e-3), loss='categorical_crossentropy', metrics=['accuracy'])
+
+#%%
+
+for layer in model.layers:
+    layer.W_regularizer = l2(1e-2)
+#%%    
+
+model.fit_generator(train_generator, epochs=40, 
+                    validation_data=val_generator,
+                    callbacks=callbacks,
+                    #workers=4,
+                    verbose=1)
+
+#%%
+
+from keras.models import load_model
+
+model.load_weights(best_model_file)
+model.save(best_model_file)
+#%%
+
+for layer in model.layers:
+    layer.W_regularizer = l2(1e-2)
+    layer.trainable = True
+
+model.compile(optimizer=RMSprop(1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
+ 
+
+model.fit_generator(train_generator, epochs=40, 
+                    validation_data=val_generator, 
+                    callbacks=callbacks,
+                    #workers=4,
+                    verbose=1)
+
+#%%
+
+from keras.models import load_model
+
+model.load_weights(best_model_file)
+model.save(best_model_file)
+
+#%%
+
+test_datagen = val_datagen.flow_from_directory(
+    './test',
+    target_size=(img_height, img_width),
+    batch_size=16,
+    class_mode='categorical',
+    shuffle=False)
+
+#%%
+
+predictions = model.predict_generator(test_datagen)
+
+#%%
+import numpy as np
+
+preds = []
+for i in range(len(predictions)):
+    pos = np.argmax(predictions[i])
+    preds.append(CATEGORIES[pos])
+
+#%%
+import pandas as pd
+    
+img_file = os.listdir('./test/test')
+
+pred_df = pd.DataFrame({'file': img_file, 'species': preds})
