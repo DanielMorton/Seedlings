@@ -11,4 +11,4 @@ Validation is measured using AUC.
 
 DeepNet Results: 97.2% accuray.
 
-Xception Resuts: 97.3% accuray.
+Xception Resuts: 97.4% accuray.
