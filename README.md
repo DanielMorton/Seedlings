@@ -10,3 +10,5 @@ Train/Validation split is 80/20.
 Validation is measured using AUC.
 
 DeepNet Results: 97.2% accuray.
+
+Xception Resuts: 97.3% accuray.
