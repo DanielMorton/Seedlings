@@ -7,7 +7,7 @@ Created on Mon Feb 26 10:11:11 2018
 """
 
 from keras.applications import Xception
-from keras.callbacks import TensorBoard, LearningRateScheduler, ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
+from keras.callbacks import TensorBoard, ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
 from keras.models import Model
 from keras.layers import Dense, Dropout
 from keras.optimizers import RMSprop
@@ -33,7 +33,6 @@ train_datagen = ImageDataGenerator(
     rotation_range=90,
     width_shift_range=0.2,
     height_shift_range=0.2,
-    #shear_range=0.2,
     zoom_range=0.2,
     horizontal_flip=True,
     vertical_flip=True)

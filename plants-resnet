@@ -7,7 +7,7 @@ Created on Mon Feb 26 10:11:11 2018
 """
 
 from keras.applications import ResNet50
-from keras.callbacks import TensorBoard, LearningRateScheduler, ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
+from keras.callbacks import TensorBoard, ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
 from keras.models import Model
 from keras.layers import Dense, Dropout
 from keras.optimizers import RMSprop
